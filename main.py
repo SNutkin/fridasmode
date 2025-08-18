@@ -6,7 +6,7 @@ ATTR_COLORS = {
     "str": "\033[91m",  # Red ANSI
     "agi": "\033[92m",  # Green
     "int": "\033[94m",  # Blue
-    "unknown": "\033[0m"  # Default
+    "unknown": "\033[107m"  # Default
 }
 RESET = "\033[0m"
 
