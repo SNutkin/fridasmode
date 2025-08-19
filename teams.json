@@ -1,0 +1,16 @@
+{
+    "teams": [
+        {
+            "name": "Natus Vincere",
+            "points": 7000
+        },
+        {
+            "name": "Team Secret",
+            "points": 7000
+        },
+        {
+            "name": "OG",
+            "points": 7000
+        }
+    ]
+}

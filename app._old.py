@@ -1,6 +1,9 @@
 from dota_api import get_match_data, get_hero_dict
 from stats import get_first_blood, team_same_attribute, fountain_death_check, early_bounty_check, aegis_denial_check, dagon_check, dust_check, load_hero_costs, team_cost_check
+from team_manager import load_teams, update_team_points
 import streamlit as st
+
+
 
 ATTR_COLORS = {
     "str": "red",
@@ -15,8 +18,9 @@ def colored_attr(hero):
     return f"<span style='color: {color};'>{hero['hero']} ({hero['attribute'].capitalize()}) - {hero['player_name']}</span>"
 
 def main():
+
+
     st.image("fridasmode.png", use_container_width=True)
-    #st.title("Dota 2 Fridas Mode Match Analyzer")
     
     match_id = st.text_input("Enter Dota 2 match ID:")
     
@@ -125,6 +129,50 @@ def main():
             dust_stats = dust_check(match_data, hero_dict)
             st.subheader("🧹 Dust Check:")
             st.info(dust_stats["message"])
+
+
+            st.title("🏆 Tournament Match Analyzer")
+
+            # Load teams
+            teams_data = load_teams()
+            team_names = [t["name"] for t in teams_data["teams"]]
+
+            # User selects match
+            if match_id:
+                #match_data = get_match_data(match_id)
+                #hero_dict = get_hero_dict()
+                #hero_costs = load_hero_costs("hero_costs.json")
+
+                # Run analysis
+                cost_stats = team_cost_check(match_data, hero_dict, hero_costs)
+
+                # Display results
+                st.subheader("Hero Cost Analysis")
+                #st.json(cost_stats)
+
+                # Dropdown to assign Radiant/Dire to tournament teams
+                radiant_team = st.selectbox("Select Radiant Team", team_names)
+                dire_team = st.selectbox("Select Dire Team", team_names)
+
+                # Apply point changes based on results
+                radiant_change = -cost_stats["Radiant_total"]  # deduct hero cost
+                dire_change = -cost_stats["Dire_total"]
+
+                # Example: add 10 points if they got First Blood
+                fb = get_first_blood(match_data, hero_dict)
+                if fb:
+                    if fb["team"] == "Radiant":
+                        radiant_change += 10
+                        st.write(f"Radiant team got First Blood! +10 points")
+                    else:
+                        dire_change += 10
+                        st.write(f"Dire team got First Blood! +10 points")  
+                st.write(f"Points change → {radiant_team}: {radiant_change}, {dire_team}: {dire_change}")
+
+                if st.button("✅ Confirm and Update Tournament Points"):
+                    update_team_points(radiant_team, radiant_change)
+                    update_team_points(dire_team, dire_change)
+                    st.success("Points updated successfully!")
 
 
 if __name__ == "__main__":
