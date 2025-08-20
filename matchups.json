@@ -1,12 +1,12 @@
 [
-  {
-    "id": 1,
-    "team1": "OG",
-    "team2": "Natus Vincere"
-  },
-  {
-    "id": 2,
-    "team1": "Natus Vincere",
-    "team2": "Team Secret"
-  }
+    {
+        "id": 3,
+        "team1": "Natus Vincere",
+        "team2": "Team Secret",
+        "date": "2025-08-21",
+        "time": "20:00:00",
+        "twitch_channel": "falcusuk",
+        "odds_team1": 2.0,
+        "odds_team2": 2.0
+    }
 ]

@@ -44,11 +44,24 @@ with col1:
     betting_team = st.selectbox("Team placing bet", team_names, key="betting_team")
 
 with col2:
-    matchup_options = [f"{m['team1']} vs {m['team2']}" for m in matchups]
+    matchup_options = [
+        f"{m['team1']} ({m.get('odds_team1', '?')}x) vs {m['team2']} ({m.get('odds_team2', '?')}x)"
+        for m in matchups
+    ]
     matchup_idx = st.selectbox("Select Matchup", range(len(matchup_options)), format_func=lambda i: matchup_options[i])
     selected_matchup = matchups[matchup_idx]
-    team_to_win = st.radio("Which team will win?", [selected_matchup["team1"], selected_matchup["team2"]])
-    points_gambled = st.number_input("Points gambled", min_value=1, step=10)
+    team1 = selected_matchup["team1"]
+    team2 = selected_matchup["team2"]
+    odds_team1 = float(selected_matchup.get("odds_team1", 2.0))
+    odds_team2 = float(selected_matchup.get("odds_team2", 2.0))
+    team_to_win = st.radio(
+        "Which team will win?",
+        [
+            f"{team1} ({odds_team1}x)",
+            f"{team2} ({odds_team2}x)"
+        ]
+    )
+    points_gambled = st.number_input("Points gambled", min_value=100, step=10)
     submit = st.button("Log Bet")
 
     if submit:
@@ -58,16 +71,21 @@ with col2:
         elif points_gambled > betting["points"]:
             st.error(f"{betting_team} does not have enough points to gamble!")
         else:
+            # Extract just the team name from the radio selection
+            team_to_win_name = team_to_win.split(" (")[0]
             bets = load_bets()
             bets.append({
                 "betting_team": betting_team,
                 "matchup_id": selected_matchup["id"],
-                "team_to_win": team_to_win,
+                "team_to_win": team_to_win_name,
                 "points_gambled": points_gambled,
                 "status": "pending"
             })
             save_bets(bets)
-            st.success(f"Bet logged: {betting_team} bets {points_gambled} points on {team_to_win} to win {selected_matchup['team1']} vs {selected_matchup['team2']}.")
+            st.success(
+                f"Bet logged: {betting_team} bets {points_gambled} points on {team_to_win_name} "
+                f"to win {team1} vs {team2}."
+            )
 
 st.divider()
 
@@ -81,27 +99,42 @@ if not pending_bets:
 else:
     for i, bet in enumerate(pending_bets):
         matchup = next((m for m in matchups if m["id"] == bet.get("matchup_id")), None)
-        matchup_str = f"{matchup['team1']} vs {matchup['team2']}" if matchup else "Unknown Matchup"
+        matchup_str = (
+            f"{matchup['team1']} ({matchup.get('odds_team1', '?')}x) vs "
+            f"{matchup['team2']} ({matchup.get('odds_team2', '?')}x)"
+            if matchup else "Unknown Matchup"
+        )
         team_to_win = bet.get("team_to_win", "N/A")
+        odds = None
+        if matchup:
+            if team_to_win == matchup["team1"]:
+                odds = float(matchup.get("odds_team1", 2.0))
+            elif team_to_win == matchup["team2"]:
+                odds = float(matchup.get("odds_team2", 2.0))
+        odds_str = f"@ {odds}x" if odds else ""
         st.markdown(
             f"""
             <div style="background-color:#f9f9f9; color:#111; padding: 1em; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1em;">
-                <b>{bet['betting_team']}</b> bets <b>{bet['points_gambled']}</b> points on <b>{team_to_win}</b> to win <b>{matchup_str}</b>
+                <b>{bet['betting_team']}</b> bets <b>{bet['points_gambled']}</b> points on <b>{team_to_win}</b> {odds_str} to win <b>{matchup_str}</b>
             </div>
             """,
             unsafe_allow_html=True
         )
         colA, colB, colC = st.columns([1,1,1])
         with colA:
-            if st.button(f"✅ Mark as Won (Double Points)", key=f"won_{i}"):
+            if st.button(f"✅ Mark as Won (Payout)", key=f"won_{i}"):
                 betting = next((t for t in teams_data["teams"] if t["name"] == bet["betting_team"]), None)
-                if betting:
-                    betting["points"] += bet["points_gambled"]
+                if betting and odds:
+                    payout = int(bet["points_gambled"] * odds)
+                    betting["points"] += payout
                     save_teams(teams_data)
-                bet["status"] = "won"
-                save_bets(bets)
-                st.success(f"{bet['betting_team']} won the bet and doubled their points gambled!")
-                st.rerun()
+                    bet["status"] = "won"
+                    save_bets(bets)
+                    st.success(
+                        f"{bet['betting_team']} won the bet and receives {payout} points! "
+                        f"(Bet: {bet['points_gambled']} x Odds: {odds})"
+                    )
+                    st.rerun()
         with colB:
             if st.button(f"❌ Mark as Lost (Lose Points)", key=f"lost_{i}"):
                 betting = next((t for t in teams_data["teams"] if t["name"] == bet["betting_team"]), None)
@@ -127,13 +160,24 @@ with st.expander("Show Resolved Bets"):
     else:
         for i, bet in enumerate(resolved_bets):
             matchup = next((m for m in matchups if m["id"] == bet.get("matchup_id")), None)
-            matchup_str = f"{matchup['team1']} vs {matchup['team2']}" if matchup else "Unknown Matchup"
+            matchup_str = (
+                f"{matchup['team1']} ({matchup.get('odds_team1', '?')}x) vs "
+                f"{matchup['team2']} ({matchup.get('odds_team2', '?')}x)"
+                if matchup else "Unknown Matchup"
+            )
             outcome = "✅ Won" if bet["status"] == "won" else "❌ Lost"
             team_to_win = bet.get("team_to_win", "N/A")
+            odds = None
+            if matchup:
+                if team_to_win == matchup["team1"]:
+                    odds = float(matchup.get("odds_team1", 2.0))
+                elif team_to_win == matchup["team2"]:
+                    odds = float(matchup.get("odds_team2", 2.0))
+            odds_str = f"@ {odds}x" if odds else ""
             col1, col2 = st.columns([5, 1])
             with col1:
                 st.markdown(
-                    f"{bet['betting_team']} bet on {team_to_win} to win {matchup_str} — {bet['points_gambled']} points — {outcome}"
+                    f"{bet['betting_team']} bet on {team_to_win} {odds_str} to win {matchup_str} — {bet['points_gambled']} points — {outcome}"
                 )
             with col2:
                 if st.button("🗑️ Delete", key=f"delete_resolved_{i}"):
