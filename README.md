@@ -1,2 +1,2 @@
-# fridasmode
-To look through past games and assign points. 
+# Fridas Mode
+Welcome to Fridas Mode Webtool !
