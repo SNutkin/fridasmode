@@ -1,4 +1,5 @@
 {
+    "RANDOM!": -250,
     "Anti-Mage": 100,
     "Juggernaut": 120,
     "Snapfire": 150,
@@ -44,7 +45,8 @@
     "Huskar": 150,
     "Invoker": 150,
     "Jakiro": 120,
-    "Keeper of the Light": 130, 
+    "Keeper of the Light": 130,
+    "Kez": 120, 
     "Kunkka": 150,
     "Legion Commander": 140,
     "Leshrac": 160,
@@ -120,6 +122,5 @@
     "Winter Wyvern": 190,
     "Witch Doctor": 110,
     "Wraith King": 140, 
-    "Zeus": 140,
-    "Kez": 150
+    "Zeus": 140    
 }    
