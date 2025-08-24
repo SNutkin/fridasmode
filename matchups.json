@@ -8,5 +8,15 @@
         "twitch_channel": "falcusuk",
         "odds_team1": 2.0,
         "odds_team2": 2.0
+    },
+    {
+        "id": 4,
+        "team1": "Natus Vincere",
+        "team2": "Team Secret",
+        "date": "2025-08-24",
+        "time": "13:49:00",
+        "twitch_channel": "sgfg",
+        "odds_team1": 2.0,
+        "odds_team2": 2.0
     }
 ]

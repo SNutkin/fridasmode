@@ -1,3 +1,5 @@
+import json
+import os
 from dota_api import get_match_data, get_hero_dict
 from stats import (
     get_first_blood,
@@ -12,6 +14,21 @@ from stats import (
 )
 from team_manager import load_teams, update_team_points
 import streamlit as st
+
+MATCHES_FILE = "matches.json"
+
+
+def load_analyzed_matches():
+    if not os.path.exists(MATCHES_FILE):
+        return []
+    with open(MATCHES_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_analyzed_matches(matches):
+    with open(MATCHES_FILE, "w") as f:
+        json.dump(matches, f, indent=2)
+
 
 ATTR_COLORS = {
     "str": "red",
@@ -29,6 +46,32 @@ def colored_attr(hero):
 
 def main():
     st.image("fridasmode.png", use_container_width=True)
+    # Load analyzed matches
+    analyzed_matches = load_analyzed_matches()
+
+    # Layout: two columns for input and recall
+    col_input, col_dropdown = st.columns([2, 1])
+
+    with col_input:
+        # Step 1 - Match ID input
+        match_id = st.text_input("Enter Dota 2 match ID:", key="match_id_input")
+        btn_col1, btn_col2 = st.columns([1, 1])
+        with btn_col1:
+            analyze_clicked = st.button("Analyze")
+        with btn_col2:
+            clear_clicked = st.button("Clear")
+
+    with col_dropdown:
+        selected_match_id = st.selectbox(
+            "Or select a previously analyzed match:",
+            options=[""] + analyzed_matches[::-1],  # show most recent first
+            key="match_id_select",
+        )
+        if selected_match_id and selected_match_id != st.session_state.get("match_id", ""):
+            st.session_state.match_id = selected_match_id
+            st.session_state.reset_trigger = False
+            match_id = selected_match_id
+
     # Initialize session state for match_id if not already set
     if "match_id" not in st.session_state:
         st.session_state.match_id = ""
@@ -36,22 +79,8 @@ def main():
     if "reset_trigger" not in st.session_state:
         st.session_state.reset_trigger = False
 
-
-
-    # Step 1 - Match ID input
-    match_id = st.text_input("Enter Dota 2 match ID:")
-
-        # Create two columns
-    col1, col2 = st.columns(2)
-
-    with col1:
-        analyze_clicked = st.button("Analyze")
-
-    with col2:
-        clear_clicked = st.button("Clear")
-       
     if analyze_clicked:
-        if not match_id.isdigit():
+        if not match_id or not match_id.isdigit():
             st.error("❌ Invalid match ID. Must be a number.")
             return
 
@@ -66,6 +95,11 @@ def main():
         st.session_state.hero_info = hero_info
         st.session_state.hero_costs = hero_costs
 
+        # Save match_id to matches.json if not already present
+        if match_id not in analyzed_matches:
+            analyzed_matches.append(match_id)
+            save_analyzed_matches(analyzed_matches)
+
     if clear_clicked:
         st.session_state.match_id = ""
         st.session_state.reset_trigger = True
@@ -74,9 +108,8 @@ def main():
         st.session_state.reset_trigger = False
         return  # just return to stop processing current run
 
-
     # Step 2 - If match already loaded, display analysis
-    if "match_data" in st.session_state:
+    if "match_data" in st.session_state and st.session_state.match_id:
         match_data = st.session_state.match_data
         hero_dict = st.session_state.hero_dict
         hero_info = st.session_state.hero_info
@@ -182,8 +215,6 @@ def main():
         dust_stats = dust_check(match_data, hero_dict)
         st.info(dust_stats["message"])
 
-
-
         # Tournament scoring section
         st.title("🏆 Tournament Match Analyzer")
         teams_data = load_teams()
@@ -209,7 +240,7 @@ def main():
             st.success("✅ No team used Dust! Awarding 10 points to both teams.")
             radiant_change += 10
             dire_change += 10
-        else:   
+        else:
             st.write("❌ Dust was used in this match. No points awarded.")
 
         st.write(f"Points change → {radiant_team}: {radiant_change}, {dire_team}: {dire_change}")
@@ -226,7 +257,7 @@ def main():
             update_team_points(radiant_team, radiant_change)
             update_team_points(dire_team, dire_change)
             st.success("Points updated successfully!")
-            
+
 
 if __name__ == "__main__":
     main()
